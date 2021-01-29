@@ -6,6 +6,10 @@
 
 // link the pattern table into CHR ROM
 //#link "chr_generic.s"
+//#link "text_title.s"
+
+extern const byte text_title_pal[16];
+extern const byte text_title_rle[];
 
 char a[1], b[2];
 char i;
@@ -34,15 +38,49 @@ void title(void);
 void layout(void);
 void score_screen(void);
 
+
+
+void fade_in() {
+  byte vb;
+  for (vb=0; vb<=4; vb++) {
+    // set virtual bright value
+    pal_bright(vb);
+    // wait for 4/60 sec
+    ppu_wait_frame();
+    ppu_wait_frame();
+    ppu_wait_frame();
+    ppu_wait_frame();
+  }
+}
+
+void show_title_screen(const byte* pal, const byte* rle) {
+  // disable rendering
+  ppu_off();
+  // set palette, virtual bright to 0 (total black)
+  pal_bg(pal);
+  pal_bright(0);
+  // unpack nametable into the VRAM
+  vram_adr(0x2000);
+  vram_unrle(rle);
+  // enable rendering
+  ppu_on_all();
+  // fade in from black
+  fade_in();
+}
+
+
+
+
 void main(void) {
+  title();
   
   // set palette colors
-  pal_col(0,0x28);	// set screen to dark blue
-  pal_col(1,0x30);	// fuchsia
-  pal_col(2,0x30);	// grey
-  pal_col(3,0x0f);	// white
+  pal_col(0,0x28);	// screen 
+  pal_col(1,0x11);	// 
+  pal_col(2,0x11);	// 
+  pal_col(3,0x30);	// 
   
-  title();
+  
   ppu_off();
   layout();
   set_question();
@@ -132,13 +170,7 @@ void layout(){
 
 void title(){ 
   
-  vram_adr(NTADR_A(10,13));
-  vram_write("THINK FAST!", 12);
-  
-  vram_adr(NTADR_A(10,16));
-  vram_write("Press START", 11);
-  ppu_on_all();
-
+   show_title_screen(text_title_pal, text_title_rle);
    while(1){
    pad = pad_trigger(i);
    if(pad & PAD_START)
