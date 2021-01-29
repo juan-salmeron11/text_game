@@ -20,83 +20,51 @@ char num1[2], num2[2], result[2];	//Random numbers will be turned to string and 
 int operator = 0; //If 0 ADD, if 1 MULTIPLY
 char dummyResult[2]; //Stores all the wrong answers
   
-int y =  9;
+
 int row = 9; //row arrow is at
 int ans = 1;// correct answer choice
 int choice = 1;// player choice
-int correct = 0;// number of questions correct
-int timer = 450;// timer for score
-int question = 0; //current question
+int timer = 450;// internal game timer
 int score = 0;
 int f; //for frames
-int ti = 0;
+bool next = false;// for next question
+int y =  9;
 
-byte rndint(byte a, byte b);
-void set_question(void);
-void controls(void);
-void title(void);
-void layout(void);
-void score_screen(void);
+byte rndint(byte, byte);
+void set_question(void); 	//sets random nums to add or multiply
+void controls(void); 		//moves arrow and A to answer
+void title(void); 		//shows title screen
+void layout(void);		//sets layout for questions
+void score_screen(int);		//shows # of correct answers
 
-
-
-void fade_in() {
-  byte vb;
-  for (vb=0; vb<=4; vb++) {
-    // set virtual bright value
-    pal_bright(vb);
-    // wait for 4/60 sec
-    ppu_wait_frame();
-    ppu_wait_frame();
-    ppu_wait_frame();
-    ppu_wait_frame();
-  }
-}
-
-void show_title_screen(const byte* pal, const byte* rle) {
-  // disable rendering
-  ppu_off();
-  // set palette, virtual bright to 0 (total black)
-  pal_bg(pal);
-  pal_bright(0);
-  // unpack nametable into the VRAM
-  vram_adr(0x2000);
-  vram_unrle(rle);
-  // enable rendering
-  ppu_on_all();
-  // fade in from black
-  fade_in();
-}
-
-
-
+void fade_in(void);
+void show_title_screen(const byte*, const byte*);
 
 void main(void) {
+  
   title();
   
   // set palette colors
-  pal_col(0,0x28);	// screen 
-  pal_col(1,0x11);	// 
-  pal_col(2,0x11);	// 
-  pal_col(3,0x30);	// 
+  pal_col(0,0x28);
+  pal_col(1,0x11);	 
+  pal_col(2,0x11);	 
+  pal_col(3,0x30);	
   
-  
-  ppu_off();
   layout();
-  set_question();
+  set_question(); 
   
-  ppu_on_all();
   // Question Loop
   while (timer > 0)
   {
     
     controls();
-    ppu_wait_frame();  	//work in progress for timer
-    timer--;		// decrease by 1 every frame
     
-    if(timer % 50 == 0)
+    ppu_wait_frame();  			//for in internal timer
+    timer--;		
+    
+    if(timer % 50 == 0)			//decreases game timer by 1
     {
-      ppu_off();
+      ppu_off();	
       y -=1;
       sprintf(a, "%d", y);
       vram_adr(NTADR_A(28,2));		// set address
@@ -104,40 +72,33 @@ void main(void) {
       ppu_on_all();
     }
     
-    if(ti == 0){
-      ti = 1;
+    if(next == true){	 		//clear and load next question
+      next = false;
       ppu_off();
       for(f=0; f < 10; f++) ppu_wait_frame();
-      //clear and load next question
       set_question();
-     // y = 9;
-     // sprintf(a, "%d", y);
       vram_adr(NTADR_A(28,2));		// set address
       vram_write(a, 1);			// write bytes to video RAM
-      question++;
       ppu_on_all();
     }
   };
   
-  score_screen();
+  score_screen(score);
   
   while(1){};
   
 };
 
 
-
-void score_screen(){
+void score_screen(s){
   ppu_off();
-  y = score;
-  sprintf(b, "%d", y);
+  sprintf(b, "%d", s);			//converts int to char
   vram_adr(NAMETABLE_A);
   vram_fill(0,1024);  
   vram_adr(NTADR_A(7,14)); 
   vram_write("You Answered:", 14);
-  vram_adr(NTADR_A(20,14));		// set address
-  vram_write(b, 2);			
-
+  vram_adr(NTADR_A(20,14));		
+  vram_write(b, 2);			//display score
   ppu_on_all();
 
 }
@@ -150,7 +111,6 @@ void layout(){
   vram_write("What is ....", 11);
   vram_adr(NTADR_A(17,2));
   vram_write("?", 1);
-  
   
   sprintf(a, "%d", y);
   vram_adr(NTADR_A(28,2)); 	//set timer
@@ -176,7 +136,7 @@ void title(){
    if(pad & PAD_START)
    {
       ppu_off();
-      for(f=0; f < 20; f++) ppu_wait_frame();
+      for(f=0; f < 10; f++) ppu_wait_frame();
       break;
     }
   temp1 = rndint(1,9);
@@ -188,19 +148,17 @@ void title(){
 
 
 void controls(){
+  
       pad = pad_trigger(i);
-  //player pressed down and arrow is not on last choice
     if (pad & PAD_DOWN && row < 14 && choice < 4) {
       	ppu_off();
       	vram_adr(NTADR_A(3,row));
       	vram_write(NULL, 1);	//erase arrow at previous choice	
       	row += 2;			
      	vram_adr(NTADR_A(3,row)); //increment row and set arrow on next choice
-  	vram_write("\x1f", 1);	
-      	
-      	
+  	vram_write("\x1f", 1);	     	
       	choice++;	// increment player choice
-       ppu_on_all();                
+       	ppu_on_all();                
     }
     
     //player presses up and arrow isn not on first choice
@@ -211,21 +169,19 @@ void controls(){
       	row -= 2;
       	vram_adr(NTADR_A(3,row));
   	vram_write("\x1f", 1);
-      	
       	choice--;
       	ppu_on_all();
 
                           }
     if( pad & PAD_A )
     {
-      if(ans == choice) //if answer is correct flash green and increment num of correct
+      if(ans == choice) //if answer is correct flash green and increment score
       {
         pal_col(0,0x19);
   	for(f = 0; f < 8; f++) ppu_wait_frame();
         pal_col(0,0x28);
-        correct++;
         score += 1; 
-        ti = 0;
+        next = true;
       }
      
       else		// else flash red
@@ -233,7 +189,7 @@ void controls(){
         pal_col(0,0x16);
         for(f = 0; f < 8; f++) ppu_wait_frame();
         pal_col(0,0x28);
-       ti = 0;
+       next = true;
       } 
     }
     
@@ -245,11 +201,10 @@ void set_question(){
   temp1 = rndint(1,9);
   temp2 = rndint(1,9);
   operator = rndint(1,90);
-  
   sprintf(num1, "%d", temp1); 
   sprintf(num2, "%d", temp2);
   
-    //Display operands and operators
+  //Display operands and operators
   vram_adr(NTADR_A(11,2));		
   vram_write(num1, 2);
   vram_adr(NTADR_A(15,2));		
@@ -269,9 +224,7 @@ void set_question(){
     sprintf(result, "%d", temp1 * temp2);
   }
   
-   ans = rndint(1,4);
-  
-  
+  ans = rndint(1,4);
   switch(ans) {
 
    case 1:
@@ -360,4 +313,32 @@ void set_question(){
 
 byte rndint(byte a, byte b){
   return (rand() % (b-a)) + a;
+}
+
+void fade_in() {
+  byte vb;
+  for (vb=0; vb<=4; vb++) {
+    // set virtual bright value
+    pal_bright(vb);
+    // wait for 4/60 sec
+    ppu_wait_frame();
+    ppu_wait_frame();
+    ppu_wait_frame();
+    ppu_wait_frame();
+  }
+}
+
+void show_title_screen(const byte* pal, const byte* rle) {
+  // disable rendering
+  ppu_off();
+  // set palette, virtual bright to 0 (total black)
+  pal_bg(pal);
+  pal_bright(0);
+  // unpack nametable into the VRAM
+  vram_adr(0x2000);
+  vram_unrle(rle);
+  // enable rendering
+  ppu_on_all();
+  // fade in from black
+  fade_in();
 }
